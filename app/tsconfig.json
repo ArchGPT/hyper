@@ -3,7 +3,8 @@
   "compilerOptions": {
     "declarationDir": "../dist/tmp/appdts/",
     "outDir": "../target/",
-    "noImplicitAny": false
+    "noImplicitAny": false,
+    "skipLibCheck":true
   },
   "include": [
     "./**/*",

@@ -1,11 +1,11 @@
-import {readFileSync, mkdirpSync} from 'fs-extra';
+import { readFileSync, mkdirpSync } from "fs-extra";
 
-import type {rawConfig} from '../../typings/config';
-import notify from '../notify';
+import type { rawConfig } from "../../typings/config";
+import notify from "../notify";
 
-import {_init} from './init';
-import {migrateHyper3Config} from './migrate';
-import {defaultCfg, cfgPath, plugs, defaultPlatformKeyPath} from './paths';
+import { _init } from "./init";
+import { migrateHyper3Config } from "./migrate";
+import { defaultCfg, cfgPath, plugs, defaultPlatformKeyPath } from "./paths";
 
 let defaultConfig: rawConfig;
 
@@ -20,18 +20,18 @@ const _importConf = () => {
     console.error(err);
   }
 
-  let defaultCfgRaw = '{}';
+  let defaultCfgRaw = "{}";
   try {
-    defaultCfgRaw = readFileSync(defaultCfg, 'utf8');
+    defaultCfgRaw = readFileSync(defaultCfg, "utf8");
   } catch (err) {
     console.log(err);
   }
   const _defaultCfg = JSON.parse(defaultCfgRaw) as rawConfig;
 
   // Importing platform specific keymap
-  let content = '{}';
+  let content = "{}";
   try {
-    content = readFileSync(defaultPlatformKeyPath(), 'utf8');
+    content = readFileSync(defaultPlatformKeyPath(), "utf8");
   } catch (err) {
     console.error(err);
   }
@@ -41,13 +41,13 @@ const _importConf = () => {
   // Import user config
   let userCfg: rawConfig;
   try {
-    userCfg = JSON.parse(readFileSync(cfgPath, 'utf8'));
+    userCfg = JSON.parse(readFileSync(cfgPath, "utf8"));
   } catch (err) {
     notify("Couldn't parse config file. Using default config instead.");
     userCfg = JSON.parse(defaultCfgRaw);
   }
 
-  return {userCfg, defaultCfg: _defaultCfg};
+  return { userCfg, defaultCfg: _defaultCfg };
 };
 
 export const _import = () => {

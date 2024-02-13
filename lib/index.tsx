@@ -1,49 +1,53 @@
-import './v8-snapshot-util';
-import {webFrame} from 'electron';
-import React from 'react';
+import "./v8-snapshot-util";
+import { webFrame } from "electron";
+import React from "react";
 
-import {createRoot} from 'react-dom/client';
-import {Provider} from 'react-redux';
+import { createRoot } from "react-dom/client";
+import { Provider } from "react-redux";
 
-import type {configOptions} from '../typings/config';
+import type { configOptions } from "../typings/config";
 
-import {loadConfig, reloadConfig} from './actions/config';
-import init from './actions/index';
-import {addNotificationMessage} from './actions/notifications';
-import * as sessionActions from './actions/sessions';
-import * as termGroupActions from './actions/term-groups';
-import * as uiActions from './actions/ui';
-import * as updaterActions from './actions/updater';
-import HyperContainer from './containers/hyper';
-import rpc from './rpc';
-import configureStore from './store/configure-store';
-import * as config from './utils/config';
-import {getBase64FileData} from './utils/file';
-import * as plugins from './utils/plugins';
+import { loadConfig, reloadConfig } from "./actions/config";
+import init from "./actions/index";
+import { addNotificationMessage } from "./actions/notifications";
+import * as sessionActions from "./actions/sessions";
+import * as termGroupActions from "./actions/term-groups";
+import * as uiActions from "./actions/ui";
+import * as updaterActions from "./actions/updater";
+import HyperContainer from "./containers/hyper";
+import rpc from "./rpc";
+import configureStore from "./store/configure-store";
+import * as config from "./utils/config";
+import { getBase64FileData } from "./utils/file";
+import * as plugins from "./utils/plugins";
 
 // On Linux, the default zoom was somehow changed with Electron 3 (or maybe 2).
 // Setting zoom factor to 1.2 brings back the normal default size
-if (process.platform === 'linux') {
+if (process.platform === "linux") {
   webFrame.setZoomFactor(1.2);
 }
 
 const store_ = configureStore();
 
-Object.defineProperty(window, 'store', {get: () => store_});
-Object.defineProperty(window, 'rpc', {get: () => rpc});
-Object.defineProperty(window, 'config', {get: () => config});
-Object.defineProperty(window, 'plugins', {get: () => plugins});
+Object.defineProperty(window, "store", { get: () => store_ });
+Object.defineProperty(window, "rpc", { get: () => rpc });
+Object.defineProperty(window, "config", { get: () => config });
+Object.defineProperty(window, "plugins", { get: () => plugins });
 
 const fetchFileData = (configData: configOptions) => {
-  const configInfo: configOptions = {...configData, bellSound: null};
-  if (!configInfo.bell || configInfo.bell.toUpperCase() !== 'SOUND' || !configInfo.bellSoundURL) {
+  const configInfo: configOptions = { ...configData, bellSound: null };
+  if (
+    !configInfo.bell ||
+    configInfo.bell.toUpperCase() !== "SOUND" ||
+    !configInfo.bellSoundURL
+  ) {
     store_.dispatch(reloadConfig(configInfo));
     return;
   }
 
   void getBase64FileData(configInfo.bellSoundURL).then((base64FileData) => {
     // prepend "base64," to the result of this method in order for this to work properly within xterm.js
-    const bellSound = !base64FileData ? null : 'base64,' + base64FileData;
+    const bellSound = !base64FileData ? null : "base64," + base64FileData;
     configInfo.bellSound = bellSound;
     store_.dispatch(reloadConfig(configInfo));
   });
@@ -69,178 +73,192 @@ config.subscribe(() => {
 
 // initialize communication with main electron process
 // and subscribe to all user intents for example from menus
-rpc.on('ready', () => {
+rpc.on("ready", () => {
   store_.dispatch(init());
   store_.dispatch(uiActions.setFontSmoothing());
 });
 
-rpc.on('session add', (data) => {
+rpc.on("session add", (data) => {
   store_.dispatch(sessionActions.addSession(data));
 });
 
-rpc.on('session data', (d: string) => {
+rpc.on("session data", (d: string) => {
   // the uid is a uuid v4 so it's 36 chars long
   const uid = d.slice(0, 36);
   const data = d.slice(36);
+  console.log("addSessionData", uid, data);
+  // window.zz = (a) => store_.dispatch(sessionActions.addSessionData(uid, a));
   store_.dispatch(sessionActions.addSessionData(uid, data));
 });
 
-rpc.on('session data send', ({uid, data, escaped}) => {
+rpc.on("session data send", ({ uid, data, escaped }) => {
+  console.log("session data send", data);
   store_.dispatch(sessionActions.sendSessionData(uid, data, escaped));
 });
 
-rpc.on('session exit', ({uid}) => {
+rpc.on("session exit", ({ uid }) => {
   store_.dispatch(termGroupActions.ptyExitTermGroup(uid));
 });
 
-rpc.on('termgroup close req', () => {
+rpc.on("termgroup close req", () => {
   store_.dispatch(termGroupActions.exitActiveTermGroup());
 });
 
-rpc.on('session clear req', () => {
+rpc.on("session clear req", () => {
   store_.dispatch(sessionActions.clearActiveSession());
 });
 
-rpc.on('session move word left req', () => {
-  store_.dispatch(sessionActions.sendSessionData(null, '\x1bb'));
+rpc.on("session move word left req", () => {
+  store_.dispatch(sessionActions.sendSessionData(null, "\x1bb"));
 });
 
-rpc.on('session move word right req', () => {
-  store_.dispatch(sessionActions.sendSessionData(null, '\x1bf'));
+rpc.on("session move word right req", () => {
+  store_.dispatch(sessionActions.sendSessionData(null, "\x1bf"));
 });
 
-rpc.on('session move line beginning req', () => {
-  store_.dispatch(sessionActions.sendSessionData(null, '\x1bOH'));
+rpc.on("session move line beginning req", () => {
+  store_.dispatch(sessionActions.sendSessionData(null, "\x1bOH"));
 });
 
-rpc.on('session move line end req', () => {
-  store_.dispatch(sessionActions.sendSessionData(null, '\x1bOF'));
+rpc.on("session move line end req", () => {
+  store_.dispatch(sessionActions.sendSessionData(null, "\x1bOF"));
 });
 
-rpc.on('session del word left req', () => {
-  store_.dispatch(sessionActions.sendSessionData(null, '\x1b\x7f'));
+rpc.on("session del word left req", () => {
+  store_.dispatch(sessionActions.sendSessionData(null, "\x1b\x7f"));
 });
 
-rpc.on('session del word right req', () => {
-  store_.dispatch(sessionActions.sendSessionData(null, '\x1bd'));
+rpc.on("session del word right req", () => {
+  store_.dispatch(sessionActions.sendSessionData(null, "\x1bd"));
 });
 
-rpc.on('session del line beginning req', () => {
-  store_.dispatch(sessionActions.sendSessionData(null, '\x1bw'));
+rpc.on("session del line beginning req", () => {
+  store_.dispatch(sessionActions.sendSessionData(null, "\x1bw"));
 });
 
-rpc.on('session del line end req', () => {
-  store_.dispatch(sessionActions.sendSessionData(null, '\x10B'));
+rpc.on("session del line end req", () => {
+  store_.dispatch(sessionActions.sendSessionData(null, "\x10B"));
 });
 
-rpc.on('session break req', () => {
-  store_.dispatch(sessionActions.sendSessionData(null, '\x03'));
+rpc.on("session break req", () => {
+  store_.dispatch(sessionActions.sendSessionData(null, "\x03"));
 });
 
-rpc.on('session stop req', () => {
-  store_.dispatch(sessionActions.sendSessionData(null, '\x1a'));
+rpc.on("session stop req", () => {
+  store_.dispatch(sessionActions.sendSessionData(null, "\x1a"));
 });
 
-rpc.on('session quit req', () => {
-  store_.dispatch(sessionActions.sendSessionData(null, '\x1c'));
+rpc.on("session quit req", () => {
+  store_.dispatch(sessionActions.sendSessionData(null, "\x1c"));
 });
 
-rpc.on('session tmux req', () => {
-  store_.dispatch(sessionActions.sendSessionData(null, '\x02'));
+rpc.on("session tmux req", () => {
+  store_.dispatch(sessionActions.sendSessionData(null, "\x02"));
 });
 
-rpc.on('session search', () => {
+rpc.on("session search", () => {
   store_.dispatch(sessionActions.openSearch());
 });
 
-rpc.on('session search close', () => {
+rpc.on("session search close", () => {
   store_.dispatch(sessionActions.closeSearch());
 });
 
-rpc.on('termgroup add req', ({activeUid, profile}) => {
+rpc.on("termgroup add req", ({ activeUid, profile }) => {
+  console.log("session add req", activeUid, profile);
   store_.dispatch(termGroupActions.requestTermGroup(activeUid, profile));
 });
 
-rpc.on('split request horizontal', ({activeUid, profile}) => {
+rpc.on("split request horizontal", ({ activeUid, profile }) => {
   store_.dispatch(termGroupActions.requestHorizontalSplit(activeUid, profile));
 });
 
-rpc.on('split request vertical', ({activeUid, profile}) => {
+rpc.on("split request vertical", ({ activeUid, profile }) => {
   store_.dispatch(termGroupActions.requestVerticalSplit(activeUid, profile));
 });
 
-rpc.on('reset fontSize req', () => {
+rpc.on("reset fontSize req", () => {
   store_.dispatch(uiActions.resetFontSize());
 });
 
-rpc.on('increase fontSize req', () => {
+rpc.on("increase fontSize req", () => {
   store_.dispatch(uiActions.increaseFontSize());
 });
 
-rpc.on('decrease fontSize req', () => {
+rpc.on("decrease fontSize req", () => {
   store_.dispatch(uiActions.decreaseFontSize());
 });
 
-rpc.on('move left req', () => {
+rpc.on("move left req", () => {
   store_.dispatch(uiActions.moveLeft());
 });
 
-rpc.on('move right req', () => {
+rpc.on("move right req", () => {
   store_.dispatch(uiActions.moveRight());
 });
 
-rpc.on('move jump req', (index) => {
+rpc.on("move jump req", (index) => {
   store_.dispatch(uiActions.moveTo(index));
 });
 
-rpc.on('next pane req', () => {
+rpc.on("next pane req", () => {
   store_.dispatch(uiActions.moveToNextPane());
 });
 
-rpc.on('prev pane req', () => {
+rpc.on("prev pane req", () => {
   store_.dispatch(uiActions.moveToPreviousPane());
 });
 
-rpc.on('open file', ({path}) => {
+rpc.on("open file", ({ path }) => {
   store_.dispatch(uiActions.openFile(path));
 });
 
-rpc.on('open ssh', (parsedUrl) => {
+rpc.on("open ssh", (parsedUrl) => {
   store_.dispatch(uiActions.openSSH(parsedUrl));
 });
 
-rpc.on('update available', ({releaseName, releaseNotes, releaseUrl, canInstall}) => {
-  store_.dispatch(updaterActions.updateAvailable(releaseName, releaseNotes, releaseUrl, canInstall));
-});
+rpc.on(
+  "update available",
+  ({ releaseName, releaseNotes, releaseUrl, canInstall }) => {
+    store_.dispatch(
+      updaterActions.updateAvailable(
+        releaseName,
+        releaseNotes,
+        releaseUrl,
+        canInstall,
+      ),
+    );
+  },
+);
 
-rpc.on('move', (window) => {
+rpc.on("move", (window) => {
   store_.dispatch(uiActions.windowMove(window));
 });
 
-rpc.on('windowGeometry change', (data) => {
+rpc.on("windowGeometry change", (data) => {
   store_.dispatch(uiActions.windowGeometryUpdated(data));
 });
 
-rpc.on('add notification', ({text, url, dismissable}) => {
+rpc.on("add notification", ({ text, url, dismissable }) => {
   store_.dispatch(addNotificationMessage(text, url, dismissable));
 });
 
-rpc.on('enter full screen', () => {
+rpc.on("enter full screen", () => {
   store_.dispatch(uiActions.enterFullScreen());
 });
 
-rpc.on('leave full screen', () => {
+rpc.on("leave full screen", () => {
   store_.dispatch(uiActions.leaveFullScreen());
 });
 
-const root = createRoot(document.getElementById('mount')!);
+const root = createRoot(document.getElementById("mount")!);
 
 root.render(
   <Provider store={store_}>
     <HyperContainer />
-  </Provider>
+  </Provider>,
 );
 
-rpc.on('reload', () => {
+rpc.on("reload", () => {
   plugins.reload();
 });

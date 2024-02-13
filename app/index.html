@@ -3,21 +3,29 @@
   <head>
     <title>Hyper</title>
 
-    <meta charset="utf-8">
-    <meta name="viewport" content="initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline'">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="initial-scale=1.0" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="script-src 'self' 'unsafe-inline'"
+    />
 
     <style>
+      * {
+        margin: 0;
+        padding: 0px;
+
+        text-rendering: optimizeLegibility;
+        box-sizing: border-box;
+      }
+
       body {
         color: #fff;
         -webkit-backface-visibility: hidden;
       }
 
-      * {
-        margin: 0;
-        padding: 0;
-        text-rendering: optimizeLegibility;
-        box-sizing: border-box;
+      .hyper_main {
+        top: 200px !important;
       }
 
       @media (min-resolution: 2dppx) {
@@ -31,8 +39,12 @@
   <body>
     <div id="mount"></div>
 
-    <script>start = performance.now();</script>
+    <script>
+      start = performance.now();
+    </script>
     <script src="renderer/bundle.js"></script>
-    <script>console.log('total init time', performance.now() - start);</script>
+    <script>
+      console.log("total init time", performance.now() - start);
+    </script>
   </body>
 </html>

@@ -1,37 +1,44 @@
-import React, {forwardRef} from 'react';
+import React, { forwardRef } from "react";
 
-import type {TabsProps} from '../../typings/hyper';
-import {decorate, getTabProps} from '../utils/plugins';
+import type { TabsProps } from "../../typings/hyper";
+import { decorate, getTabProps } from "../utils/plugins";
 
-import DropdownButton from './new-tab';
-import Tab_ from './tab';
+import DropdownButton from "./new-tab";
+import Tab_ from "./tab";
 
-const Tab = decorate(Tab_, 'Tab');
+const Tab = decorate(Tab_, "Tab");
 const isMac = /Mac/.test(navigator.userAgent);
 
 const Tabs = forwardRef<HTMLElement, TabsProps>((props, ref) => {
-  const {tabs = [], borderColor, onChange, onClose, fullScreen} = props;
+  const { tabs = [], borderColor, onChange, onClose, fullScreen } = props;
 
   const hide = !isMac && tabs.length === 1;
 
   return (
-    <nav className={`tabs_nav ${hide ? 'tabs_hiddenNav' : ''}`} ref={ref}>
+    <nav className={`tabs_nav ${hide ? "tabs_hiddenNav" : ""}`} ref={ref}>
       {props.customChildrenBefore}
-      {tabs.length === 1 && isMac ? <div className="tabs_title">{tabs[0].title}</div> : null}
+      {tabs.length === 1 && isMac ? (
+        <div className="tabs_title">{tabs[0].title}</div>
+      ) : null}
       {tabs.length > 1 ? (
         <>
-          <ul key="list" className={`tabs_list ${fullScreen && isMac ? 'tabs_fullScreen' : ''}`}>
+          <ul
+            key="list"
+            className={`tabs_list ${
+              fullScreen && isMac ? "tabs_fullScreen" : ""
+            }`}
+          >
             {tabs.map((tab, i) => {
-              const {uid, title, isActive, hasActivity} = tab;
+              const { uid, title, isActive, hasActivity } = tab;
               const tabProps = getTabProps(tab, props, {
-                text: title === '' ? 'Shell' : title,
+                text: title === "" ? "Shell" : title,
                 isFirst: i === 0,
                 isLast: tabs.length - 1 === i,
                 borderColor,
                 isActive,
                 hasActivity,
                 onSelect: onChange.bind(null, uid),
-                onClose: onClose.bind(null, uid)
+                onClose: onClose.bind(null, uid),
               });
               return <Tab key={`tab-${uid}`} {...tabProps} />;
             })}
@@ -39,13 +46,16 @@ const Tabs = forwardRef<HTMLElement, TabsProps>((props, ref) => {
           {isMac && (
             <div
               key="shim"
-              style={{borderColor}}
-              className={`tabs_borderShim ${fullScreen ? 'tabs_borderShimUndo' : ''}`}
+              style={{ borderColor }}
+              className={`tabs_borderShim ${
+                fullScreen ? "tabs_borderShimUndo" : ""
+              }`}
             />
           )}
         </>
       ) : null}
-      <DropdownButton {...props} tabsVisible={tabs.length > 1} />
+
+      {/* <DropdownButton {...props} tabsVisible={tabs.length > 1} /> */}
       {props.customChildren}
 
       <style jsx>{`
@@ -58,8 +68,8 @@ const Tabs = forwardRef<HTMLElement, TabsProps>((props, ref) => {
           cursor: default;
           position: relative;
           -webkit-user-select: none;
-          -webkit-app-region: ${isMac ? 'drag' : ''};
-          top: ${isMac ? '0px' : '34px'};
+          -webkit-app-region: ${isMac ? "drag" : ""};
+          top: ${isMac ? "0px" : "34px"};
           display: flex;
           flex-flow: row;
         }
@@ -83,7 +93,7 @@ const Tabs = forwardRef<HTMLElement, TabsProps>((props, ref) => {
           max-height: 34px;
           display: flex;
           flex-flow: row;
-          margin-left: ${isMac ? '76px' : '0'};
+          margin-left: ${isMac ? "76px" : "0"};
           flex-grow: 1;
         }
 
@@ -108,6 +118,6 @@ const Tabs = forwardRef<HTMLElement, TabsProps>((props, ref) => {
   );
 });
 
-Tabs.displayName = 'Tabs';
+Tabs.displayName = "Tabs";
 
 export default Tabs;

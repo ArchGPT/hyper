@@ -1,17 +1,17 @@
 // eslint-disable-next-line eslint-comments/disable-enable-pair
 /* eslint-disable @typescript-eslint/no-unsafe-return */
-import ChildProcess from 'child_process';
-import pathModule from 'path';
+import ChildProcess from "child_process";
+import pathModule from "path";
 
-import React, {PureComponent} from 'react';
-import type {ComponentType} from 'react';
+import React, { PureComponent } from "react";
+import type { ComponentType } from "react";
 
-import {require as remoteRequire} from '@electron/remote';
+import { require as remoteRequire } from "@electron/remote";
 // TODO: Should be updates to new async API https://medium.com/@nornagon/electrons-remote-module-considered-harmful-70d69500f31
-import ReactDOM from 'react-dom';
-import {connect as reduxConnect} from 'react-redux';
-import type {ConnectOptions} from 'react-redux/es/components/connect';
-import type {Dispatch, Middleware} from 'redux';
+import ReactDOM from "react-dom";
+import { connect as reduxConnect } from "react-redux";
+import type { ConnectOptions } from "react-redux/es/components/connect";
+import type { Dispatch, Middleware } from "redux";
 
 import type {
   hyperPlugin,
@@ -25,16 +25,18 @@ import type {
   TermGroupOwnProps,
   TermProps,
   Assignable,
-  HyperActions
-} from '../../typings/hyper';
-import Notification from '../components/notification';
+  HyperActions,
+} from "../../typings/hyper";
+import Notification from "../components/notification";
 
-import IPCChildProcess from './ipc-child-process';
-import notify from './notify';
-import {ObjectTypedKeys} from './object';
+import IPCChildProcess from "./ipc-child-process";
+import notify from "./notify";
+import { ObjectTypedKeys } from "./object";
 
 // remote interface to `../plugins`
-const plugins = remoteRequire('./plugins') as typeof import('../../app/plugins');
+const plugins = remoteRequire(
+  "./plugins",
+) as typeof import("../../app/plugins");
 
 // `require`d modules
 let modules: hyperPlugin[];
@@ -44,10 +46,10 @@ let decorated: Record<string, React.ComponentClass<any>> = {};
 
 // various caches extracted of the plugin methods
 let connectors: {
-  Terms: {state: any[]; dispatch: any[]};
-  Header: {state: any[]; dispatch: any[]};
-  Hyper: {state: any[]; dispatch: any[]};
-  Notifications: {state: any[]; dispatch: any[]};
+  Terms: { state: any[]; dispatch: any[] };
+  Header: { state: any[]; dispatch: any[] };
+  Hyper: { state: any[]; dispatch: any[] };
+  Notifications: { state: any[]; dispatch: any[] };
 };
 let middlewares: Middleware[];
 let uiReducers: IUiReducer[];
@@ -71,7 +73,7 @@ let reducersDecorators: {
 
 // expose decorated component instance to the higher-order components
 function exposeDecorated<P extends Record<string, any>>(
-  Component_: React.ComponentType<P>
+  Component_: React.ComponentType<P>,
 ): React.ComponentClass<P, unknown> {
   return class DecoratedComponent extends React.Component<P> {
     constructor(props: P, context: any) {
@@ -83,47 +85,54 @@ function exposeDecorated<P extends Record<string, any>>(
           // eslint-disable-next-line @typescript-eslint/no-unsafe-call
           this.props.onDecorated(decorated_);
         } catch (e) {
-          notify('Plugin error', `Error occurred. Check Developer Tools for details`, {error: e});
+          notify(
+            "Plugin error",
+            `Error occurred. Check Developer Tools for details`,
+            { error: e },
+          );
         }
       }
     };
     render() {
-      return React.createElement(Component_, Object.assign({}, this.props, {ref: this.onRef}));
+      return React.createElement(
+        Component_,
+        Object.assign({}, this.props, { ref: this.onRef }),
+      );
     }
   };
 }
 
 function getDecorated<P extends Record<string, any>>(
   parent: React.ComponentType<P>,
-  name: string
+  name: string,
 ): React.ComponentClass<P> {
   if (!decorated[name]) {
     let class_ = exposeDecorated(parent);
     (class_ as any).displayName = `_exposeDecorated(${name})`;
 
     modules.forEach((mod: any) => {
-      const method = 'decorate' + name;
-      const fn: Function & {_pluginName: string} = mod[method];
+      const method = "decorate" + name;
+      const fn: Function & { _pluginName: string } = mod[method];
 
       if (fn) {
         let class__;
 
         try {
-          class__ = fn(class_, {React, PureComponent, Notification, notify});
+          class__ = fn(class_, { React, PureComponent, Notification, notify });
           class__.displayName = `${fn._pluginName}(${name})`;
         } catch (err) {
           notify(
-            'Plugin error',
+            "Plugin error",
             `${fn._pluginName}: Error occurred in \`${method}\`. Check Developer Tools for details`,
-            {error: err}
+            { error: err },
           );
           return;
         }
 
-        if (!class__ || typeof class__.prototype.render !== 'function') {
+        if (!class__ || typeof class__.prototype.render !== "function") {
           notify(
-            'Plugin error',
-            `${fn._pluginName}: Invalid return value of \`${method}\`. No \`render\` method found. Please return a \`React.Component\`.`
+            "Plugin error",
+            `${fn._pluginName}: Invalid return value of \`${method}\`. No \`render\` method found. Please return a \`React.Component\`.`,
           );
           return;
         }
@@ -143,23 +152,28 @@ function getDecorated<P extends Record<string, any>>(
 // exposed by plugins
 export function decorate<P extends Record<string, any>>(
   Component_: React.ComponentType<P>,
-  name: string
-): React.ComponentClass<P, {hasError: boolean}> {
-  return class DecoratedComponent extends React.Component<P, {hasError: boolean}> {
+  name: string,
+): React.ComponentClass<P, { hasError: boolean }> {
+  return class DecoratedComponent extends React.Component<
+    P,
+    { hasError: boolean }
+  > {
     constructor(props: P) {
       super(props);
-      this.state = {hasError: false};
+      this.state = { hasError: false };
     }
     componentDidCatch() {
-      this.setState({hasError: true});
+      this.setState({ hasError: true });
       // No need to detail this error because React print these information.
       notify(
-        'Plugin error',
-        `Plugins decorating ${name} has been disabled because of a plugin crash. Check Developer Tools for details.`
+        "Plugin error",
+        `Plugins decorating ${name} has been disabled because of a plugin crash. Check Developer Tools for details.`,
       );
     }
     render() {
-      const Sub = this.state.hasError ? Component_ : getDecorated(Component_, name);
+      const Sub = this.state.hasError
+        ? Component_
+        : getDecorated(Component_, name);
       return React.createElement(Sub, this.props);
     }
   };
@@ -169,31 +183,37 @@ export function decorate<P extends Record<string, any>>(
 // so plugins can `require` them without needing their own version
 // https://github.com/vercel/hyper/issues/619
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const Module = require('module') as typeof import('module') & {_load: Function};
+const Module = require("module") as typeof import("module") & {
+  _load: Function;
+};
 const originalLoad = Module._load;
 Module._load = function _load(path: string) {
   // PLEASE NOTE: Code changes here, also need to be changed in
   // app/plugins.js
   switch (path) {
-    case 'react':
-      console.warn('DEPRECATED: If your plugin requires `react`, it must bundle it as a dependency');
-      return React;
-    case 'react-dom':
-      console.warn('DEPRECATED: If your plugin requires `react-dom`, it must bundle it as a dependency');
-      return ReactDOM;
-    case 'hyper/component':
+    case "react":
       console.warn(
-        'DEPRECATED: If your plugin requires `hyper/component`, it must requires `react.PureComponent` instead and bundle `react` as a dependency'
+        "DEPRECATED: If your plugin requires `react`, it must bundle it as a dependency",
+      );
+      return React;
+    case "react-dom":
+      console.warn(
+        "DEPRECATED: If your plugin requires `react-dom`, it must bundle it as a dependency",
+      );
+      return ReactDOM;
+    case "hyper/component":
+      console.warn(
+        "DEPRECATED: If your plugin requires `hyper/component`, it must requires `react.PureComponent` instead and bundle `react` as a dependency",
       );
       return PureComponent;
-    case 'hyper/notify':
+    case "hyper/notify":
       return notify;
-    case 'hyper/Notification':
+    case "hyper/Notification":
       return Notification;
-    case 'hyper/decorate':
+    case "hyper/decorate":
       return decorate;
-    case 'child_process':
-      return process.platform === 'darwin' ? IPCChildProcess : ChildProcess;
+    case "child_process":
+      return process.platform === "darwin" ? IPCChildProcess : ChildProcess;
     default:
       // eslint-disable-next-line prefer-rest-params
       return originalLoad.apply(this, arguments);
@@ -202,7 +222,7 @@ Module._load = function _load(path: string) {
 
 const clearModulesCache = () => {
   // the fs locations where user plugins are stored
-  const {path, localPath} = plugins.getBasePaths();
+  const { path, localPath } = plugins.getBasePaths();
 
   // trigger unload hooks
   modules.forEach((mod) => {
@@ -226,7 +246,8 @@ const getPluginName = (path: string) => pathModule.basename(path);
 const getPluginVersion = (path: string): string | null => {
   let version: string | null = null;
   try {
-    version = window.require(pathModule.resolve(path, 'package.json')).version as string;
+    version = window.require(pathModule.resolve(path, "package.json"))
+      .version as string;
   } catch (err) {
     console.warn(`No package.json found in ${path}`);
   }
@@ -234,15 +255,15 @@ const getPluginVersion = (path: string): string | null => {
 };
 
 const loadModules = () => {
-  console.log('(re)loading renderer plugins');
+  console.log("(re)loading renderer plugins");
   const paths = plugins.getPaths();
 
   // initialize cache that we populate with extension methods
   connectors = {
-    Terms: {state: [], dispatch: []},
-    Header: {state: [], dispatch: []},
-    Hyper: {state: [], dispatch: []},
-    Notifications: {state: [], dispatch: []}
+    Terms: { state: [], dispatch: [] },
+    Header: { state: [], dispatch: [] },
+    Hyper: { state: [], dispatch: [] },
+    Notifications: { state: [], dispatch: [] },
   };
   uiReducers = [];
   middlewares = [];
@@ -257,19 +278,23 @@ const loadModules = () => {
     getTermProps: termPropsDecorators,
     getTabProps: tabPropsDecorators,
     getTabsProps: tabsPropsDecorators,
-    getTermGroupProps: termGroupPropsDecorators
+    getTermGroupProps: termGroupPropsDecorators,
   };
 
   reducersDecorators = {
     reduceUI: uiReducers,
     reduceSessions: sessionsReducers,
-    reduceTermGroups: termGroupsReducers
+    reduceTermGroups: termGroupsReducers,
   };
 
-  const loadedPlugins = plugins.getLoadedPluginVersions().map((plugin: any) => plugin.name);
+  const loadedPlugins = plugins
+    .getLoadedPluginVersions()
+    .map((plugin: any) => plugin.name);
   modules = paths.plugins
     .concat(paths.localPlugins)
-    .filter((plugin) => loadedPlugins.indexOf(pathModule.basename(plugin)) !== -1)
+    .filter(
+      (plugin) => loadedPlugins.indexOf(pathModule.basename(plugin)) !== -1,
+    )
     .map((path) => {
       let mod: hyperPlugin;
       const pluginName = getPluginName(path);
@@ -281,9 +306,9 @@ const loadModules = () => {
         mod = window.require(path);
       } catch (err) {
         notify(
-          'Plugin load error',
+          "Plugin load error",
           `"${pluginName}" failed to load in the renderer process. Check Developer Tools for details.`,
-          {error: err}
+          { error: err },
         );
         return undefined;
       }
@@ -298,13 +323,17 @@ const loadModules = () => {
       // mapHyperTermState mapping for backwards compatibility with hyperterm
       if (mod.mapHyperTermState) {
         mod.mapHyperState = mod.mapHyperTermState;
-        console.error('mapHyperTermState is deprecated. Use mapHyperState instead.');
+        console.error(
+          "mapHyperTermState is deprecated. Use mapHyperState instead.",
+        );
       }
 
       // mapHyperTermDispatch mapping for backwards compatibility with hyperterm
       if (mod.mapHyperTermDispatch) {
         mod.mapHyperDispatch = mod.mapHyperTermDispatch;
-        console.error('mapHyperTermDispatch is deprecated. Use mapHyperDispatch instead.');
+        console.error(
+          "mapHyperTermDispatch is deprecated. Use mapHyperDispatch instead.",
+        );
       }
 
       if (mod.middleware) {
@@ -374,6 +403,7 @@ const loadModules = () => {
       if (mod.onRendererWindow) {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-call
         mod.onRendererWindow(window);
+        console.log("window", window);
       }
       console.log(`Plugin ${pluginName} (${pluginVersion}) loaded.`);
 
@@ -383,9 +413,13 @@ const loadModules = () => {
 
   const deprecatedPlugins = plugins.getDeprecatedConfig();
   Object.keys(deprecatedPlugins).forEach((name) => {
-    const {css} = deprecatedPlugins[name];
+    const { css } = deprecatedPlugins[name];
     if (css.length > 0) {
-      console.warn(`Warning: "${name}" plugin uses some deprecated CSS classes (${css.join(', ')}).`);
+      console.warn(
+        `Warning: "${name}" plugin uses some deprecated CSS classes (${css.join(
+          ", ",
+        )}).`,
+      );
     }
   });
 };
@@ -401,7 +435,11 @@ export function reload() {
   decorated = {};
 }
 
-function getProps(name: keyof typeof propsDecorators, props: any, ...fnArgs: any[]) {
+function getProps(
+  name: keyof typeof propsDecorators,
+  props: any,
+  ...fnArgs: any[]
+) {
   const decorators = propsDecorators[name];
   let props_: typeof props;
 
@@ -416,14 +454,21 @@ function getProps(name: keyof typeof propsDecorators, props: any, ...fnArgs: any
       // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       ret_ = fn(...fnArgs, props_);
     } catch (err) {
-      notify('Plugin error', `${fn._pluginName}: Error occurred in \`${name}\`. Check Developer Tools for details.`, {
-        error: err
-      });
+      notify(
+        "Plugin error",
+        `${fn._pluginName}: Error occurred in \`${name}\`. Check Developer Tools for details.`,
+        {
+          error: err,
+        },
+      );
       return;
     }
 
-    if (!ret_ || typeof ret_ !== 'object') {
-      notify('Plugin error', `${fn._pluginName}: Invalid return value of \`${name}\` (object expected).`);
+    if (!ret_ || typeof ret_ !== "object") {
+      notify(
+        "Plugin error",
+        `${fn._pluginName}: Invalid return value of \`${name}\` (object expected).`,
+      );
       return;
     }
 
@@ -436,21 +481,32 @@ function getProps(name: keyof typeof propsDecorators, props: any, ...fnArgs: any
 export function getTermGroupProps<T extends Assignable<TermGroupOwnProps, T>>(
   uid: string,
   parentProps: any,
-  props: T
+  props: T,
 ): T {
-  return getProps('getTermGroupProps', props, uid, parentProps);
+  return getProps("getTermGroupProps", props, uid, parentProps);
 }
 
-export function getTermProps<T extends Assignable<TermProps, T>>(uid: string, parentProps: any, props: T): T {
-  return getProps('getTermProps', props, uid, parentProps);
+export function getTermProps<T extends Assignable<TermProps, T>>(
+  uid: string,
+  parentProps: any,
+  props: T,
+): T {
+  return getProps("getTermProps", props, uid, parentProps);
 }
 
-export function getTabsProps<T extends Assignable<TabsProps, T>>(parentProps: any, props: T): T {
-  return getProps('getTabsProps', props, parentProps);
+export function getTabsProps<T extends Assignable<TabsProps, T>>(
+  parentProps: any,
+  props: T,
+): T {
+  return getProps("getTabsProps", props, parentProps);
 }
 
-export function getTabProps<T extends Assignable<TabProps, T>>(tab: any, parentProps: any, props: T): T {
-  return getProps('getTabProps', props, tab, parentProps);
+export function getTabProps<T extends Assignable<TabProps, T>>(
+  tab: any,
+  parentProps: any,
+  props: T,
+): T {
+  return getProps("getTabProps", props, tab, parentProps);
 }
 
 // connects + decorates a class
@@ -460,11 +516,11 @@ export function connect<stateProps extends {}, dispatchProps>(
   stateFn: (state: HyperState) => stateProps,
   dispatchFn: (dispatch: HyperDispatch) => dispatchProps,
   c: null | undefined,
-  d: ConnectOptions = {}
+  d: ConnectOptions = {},
 ) {
   return <P extends Record<string, unknown>>(
     Class: ComponentType<P & stateProps & dispatchProps>,
-    name: keyof typeof connectors
+    name: keyof typeof connectors,
   ) => {
     return reduxConnect(
       (state: HyperState) => {
@@ -477,15 +533,18 @@ export function connect<stateProps extends {}, dispatchProps>(
             ret_ = fn(state, ret);
           } catch (err) {
             notify(
-              'Plugin error',
+              "Plugin error",
               `${fn._pluginName}: Error occurred in \`map${name}State\`. Check Developer Tools for details.`,
-              {error: err}
+              { error: err },
             );
             return;
           }
 
-          if (!ret_ || typeof ret_ !== 'object') {
-            notify('Plugin error', `${fn._pluginName}: Invalid return value of \`map${name}State\` (object expected).`);
+          if (!ret_ || typeof ret_ !== "object") {
+            notify(
+              "Plugin error",
+              `${fn._pluginName}: Invalid return value of \`map${name}State\` (object expected).`,
+            );
             return;
           }
 
@@ -503,17 +562,17 @@ export function connect<stateProps extends {}, dispatchProps>(
             ret_ = fn(dispatch, ret);
           } catch (err) {
             notify(
-              'Plugin error',
+              "Plugin error",
               `${fn._pluginName}: Error occurred in \`map${name}Dispatch\`. Check Developer Tools for details.`,
-              {error: err}
+              { error: err },
             );
             return;
           }
 
-          if (!ret_ || typeof ret_ !== 'object') {
+          if (!ret_ || typeof ret_ !== "object") {
             notify(
-              'Plugin error',
-              `${fn._pluginName}: Invalid return value of \`map${name}Dispatch\` (object expected).`
+              "Plugin error",
+              `${fn._pluginName}: Invalid return value of \`map${name}Dispatch\` (object expected).`,
             );
             return;
           }
@@ -523,15 +582,15 @@ export function connect<stateProps extends {}, dispatchProps>(
         return ret;
       },
       c,
-      d
+      d,
     )(decorate(Class, name) as any) as ComponentType<P>;
   };
 }
 
 const decorateReducer: {
-  (name: 'reduceUI', fn: IUiReducer): IUiReducer;
-  (name: 'reduceSessions', fn: ISessionReducer): ISessionReducer;
-  (name: 'reduceTermGroups', fn: ITermGroupReducer): ITermGroupReducer;
+  (name: "reduceUI", fn: IUiReducer): IUiReducer;
+  (name: "reduceSessions", fn: ISessionReducer): ISessionReducer;
+  (name: "reduceTermGroups", fn: ITermGroupReducer): ITermGroupReducer;
 } = <T extends keyof typeof reducersDecorators>(name: T, fn: any) => {
   const reducers = reducersDecorators[name];
   return (state: any, action: any) => {
@@ -545,14 +604,21 @@ const decorateReducer: {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-call
         state__ = pluginReducer(state_, action);
       } catch (err) {
-        notify('Plugin error', `${fn._pluginName}: Error occurred in \`${name}\`. Check Developer Tools for details.`, {
-          error: err
-        });
+        notify(
+          "Plugin error",
+          `${fn._pluginName}: Error occurred in \`${name}\`. Check Developer Tools for details.`,
+          {
+            error: err,
+          },
+        );
         return;
       }
 
-      if (!state__ || typeof state__ !== 'object') {
-        notify('Plugin error', `${fn._pluginName}: Invalid return value of \`${name}\`.`);
+      if (!state__ || typeof state__ !== "object") {
+        notify(
+          "Plugin error",
+          `${fn._pluginName}: Invalid return value of \`${name}\`.`,
+        );
         return;
       }
 
@@ -564,20 +630,23 @@ const decorateReducer: {
 };
 
 export function decorateTermGroupsReducer(fn: ITermGroupReducer) {
-  return decorateReducer('reduceTermGroups', fn);
+  return decorateReducer("reduceTermGroups", fn);
 }
 
 export function decorateUIReducer(fn: IUiReducer) {
-  return decorateReducer('reduceUI', fn);
+  return decorateReducer("reduceUI", fn);
 }
 
 export function decorateSessionsReducer(fn: ISessionReducer) {
-  return decorateReducer('reduceSessions', fn);
+  return decorateReducer("reduceSessions", fn);
 }
 
 // redux middleware generator
-export const middleware: Middleware<{}, HyperState, Dispatch<HyperActions>> = (store) => (next) => (action) => {
-  const nextMiddleware = (remaining: Middleware[]) => (action_: any) =>
-    remaining.length ? remaining[0](store)(nextMiddleware(remaining.slice(1)))(action_) : next(action_);
-  nextMiddleware(middlewares)(action);
-};
+export const middleware: Middleware<{}, HyperState, Dispatch<HyperActions>> =
+  (store) => (next) => (action) => {
+    const nextMiddleware = (remaining: Middleware[]) => (action_: any) =>
+      remaining.length
+        ? remaining[0](store)(nextMiddleware(remaining.slice(1)))(action_)
+        : next(action_);
+    nextMiddleware(middlewares)(action);
+  };
